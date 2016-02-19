@@ -3,6 +3,8 @@ tmux-weather
 
 Show weather in tmux status line. No powerline needed.
 
+![tmux-weather](./img/screenshot.png)
+
 Installation
 ============
 Copy `tmux-weather` into PATH.
