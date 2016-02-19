@@ -7,8 +7,7 @@ let os    = require('os');
 let fs    = require('fs');
 let exec  = require('child_process').exec;
 
-const forecastIOApiKey = process.env.FORECAST_IO_KEY;
-if (!forecastIOApiKey) throw new Error('FORECAST_IO_KEY is not set');
+const forecastIOApiKey = require(path.join(os.homedir(), '.config/forecastio.json')).token;
 
 let minutesAgo = minutes => {
   let d = new Date();

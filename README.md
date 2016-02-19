@@ -13,6 +13,14 @@ Copy `tmux-weather` into PATH.
 cp ./tmux-weather /usr/local/bin/tmux-weather
 ```
 
+Create a file at `~/.config/forecasio.json` with a forecast.io API key:
+
+```json
+{
+  "token": "YOURAPIKEY"
+}
+```
+
 Add this (or something like it) to `~/.tmux.conf`:
 
 ```
