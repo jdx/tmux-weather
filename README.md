@@ -18,3 +18,9 @@ Add this (or something like it) to `~/.tmux.conf`:
 ```
 set -g status-right '#(~/bin/tmux-weather)'
 ```
+
+Other Tmux Plugins
+==================
+
+* [tmux-cpu-info](https://github.com/dickeyxxx/tmux-cpu-info)
+* [tmux-spotify-info](https://github.com/dickeyxxx/tmux-spotify-info)
