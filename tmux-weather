@@ -94,10 +94,22 @@ let getIcon = weather => {
   }
 };
 
+let temp = weather => {
+  let temp = weather.temperature;
+  let color;
+  if (temp < 40)      color = 27;
+  else if (temp < 50) color = 39;
+  else if (temp < 60) color = 50;
+  else if (temp < 70) color = 220;
+  else if (temp < 80) color = 208;
+  else if (temp < 90) color = 202;
+  else                color = 196;
+  return `#[fg=colour${color}]${parseInt(temp)}`;
+};
+
 latlon(function (latlon) {
   getJSON(`https://api.forecast.io/forecast/${forecastIOApiKey}/${latlon.lat},${latlon.lon}`, (err, weather) => {
     if (err) throw err;
-    let temp = parseInt(weather.currently.temperature);
-    console.log(`${getIcon(weather.currently)} ${temp}`);
+    console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}`);
   });
 });
