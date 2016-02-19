@@ -1,0 +1,103 @@
+#!/usr/bin/env node
+'use strict';
+
+let https = require('https');
+let path  = require('path');
+let os    = require('os');
+let fs    = require('fs');
+let exec  = require('child_process').exec;
+
+const forecastIOApiKey = process.env.FORECAST_IO_KEY;
+if (!forecastIOApiKey) throw new Error('FORECAST_IO_KEY is not set');
+
+let minutesAgo = minutes => {
+  let d = new Date();
+  d.setMinutes(d.getMinutes() - minutes);
+  return d;
+};
+
+let cache = (key, fn) => {
+  return function () {
+    let args = Array.prototype.slice.call(arguments);
+    let cb = args.pop();
+    let f = path.join(os.homedir(), '.cache', `${key}.json`);
+    fs.stat(f, (err, stat) => {
+      if (stat && minutesAgo(20) < stat.mtime) {
+        fs.readFile(f, (err, body) => {
+          if (err) throw err;
+          cb.apply(null, JSON.parse(body));
+        });
+      } else {
+        fn.apply(null, args.concat(function () {
+          let args = Array.prototype.slice.call(arguments);
+          fs.writeFile(f, JSON.stringify(args), err => {
+            if (err) console.error(err);
+          });
+          cb.apply(null, args);
+        }));
+      }
+    });
+  };
+};
+
+let latlon = cb => {
+  exec('whereami', (error, stdout) => {
+    if (error) throw error;
+    let lines = stdout.split('\n');
+    let lat = lines.find(l => l.startsWith('Latitude:')).split(': ')[1];
+    let lon = lines.find(l => l.startsWith('Longitude:')).split(': ')[1];
+    cb({lat, lon});
+  });
+};
+
+latlon = cache('latlon', latlon);
+
+let getJSON = (url, cb) => {
+  https.get(url, res => {
+    let body = '';
+    res.setEncoding('utf-8');
+    res
+    .on('error', cb)
+    .on('data', data => body += data)
+    .on('end', () => {
+      if (res.statusCode !== 200) cb(new Error(body));
+      else cb(null, JSON.parse(body));
+    });
+  });
+};
+
+getJSON = cache('weather', getJSON);
+
+let getIcon = weather => {
+  switch (weather.icon) {
+    case 'clear-day':
+      // TODO: add sunrise/sunset 🌇 🌅
+      return '☀️';
+    case 'clear-night':
+      return '🌙';
+    case 'sleet':
+    case 'rain':
+      return '☔';
+    case 'snow':
+      return '❄️';
+    case 'wind':
+      return '💨';
+    case 'fog':
+      return '🌁';
+    case 'cloudy':
+      return '☁️';
+    case 'partly-cloudy-night':
+    case 'partly-cloudy-day':
+      return '⛅️';
+    default:
+      return weather.icon;
+  }
+};
+
+latlon(function (latlon) {
+  getJSON(`https://api.forecast.io/forecast/${forecastIOApiKey}/${latlon.lat},${latlon.lon}`, (err, weather) => {
+    if (err) throw err;
+    let temp = parseInt(weather.currently.temperature);
+    console.log(`${getIcon(weather.currently)} ${temp}`);
+  });
+});
