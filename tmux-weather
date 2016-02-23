@@ -7,6 +7,11 @@ let os    = require('os');
 let fs    = require('fs');
 let exec  = require('child_process').exec;
 
+process.on('uncaughtException', err => {
+  let log = fs.createWriteStream(path.join(os.homedir(), '.cache/weather.log'));
+  log.write(err.stack+'\n');
+});
+
 const forecastIOApiKey = require(path.join(os.homedir(), '.config/forecastio.json')).token;
 
 let minutesAgo = minutes => {
