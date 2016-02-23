@@ -8,8 +8,10 @@ let fs    = require('fs');
 let exec  = require('child_process').exec;
 
 process.on('uncaughtException', err => {
-  let log = fs.createWriteStream(path.join(os.homedir(), '.cache/weather.log'));
+  let p = path.join(os.homedir(), '.cache/weather.log');
+  let log = fs.createWriteStream(p);
   log.write(err.stack+'\n');
+  console.log(`#[fg=red]${p.replace(os.homedir(), '~')}`);
 });
 
 const forecastIOApiKey = require(path.join(os.homedir(), '.config/forecastio.json')).token;
