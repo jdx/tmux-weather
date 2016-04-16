@@ -47,8 +47,8 @@ let cache = (key, fn) => {
 };
 
 let latlon = cb => {
-  exec('whereami', (error, stdout) => {
-    if (error) throw error;
+  exec('whereami', (error, stdout, stderr) => {
+    if (error) throw new Error(`whereami: ${stdout}${stderr}`);
     let lines = stdout.split('\n');
     let lat = lines.find(l => l.startsWith('Latitude:')).split(': ')[1];
     let lon = lines.find(l => l.startsWith('Longitude:')).split(': ')[1];
