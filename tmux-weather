@@ -7,14 +7,17 @@ let os    = require('os');
 let fs    = require('fs');
 let exec  = require('child_process').exec;
 
+let cacheDir = path.join(os.homedir(), '.cache', 'tmux-weather');
+try { fs.mkdirSync(cacheDir) } catch (err) { }
+
 process.on('uncaughtException', err => {
-  let p = path.join(os.homedir(), '.cache/weather.log');
+  let p = path.join(cacheDir, 'weather.log');
   let log = fs.createWriteStream(p);
   log.write(err.stack+'\n');
   console.log(`#[fg=red]${p.replace(os.homedir(), '~')}`);
 });
 
-const forecastIOApiKey = require(path.join(os.homedir(), '.config/forecastio.json')).token;
+const forecastIOApiKey = require(path.join(cacheDir, 'forecastio.json')).token;
 
 let minutesAgo = minutes => {
   let d = new Date();
@@ -26,7 +29,7 @@ let cache = (key, fn) => {
   return function () {
     let args = Array.prototype.slice.call(arguments);
     let cb = args.pop();
-    let f = path.join(os.homedir(), '.cache', `${key}.json`);
+    let f = path.join(cacheDir, `${key}.json`);
     fs.stat(f, (err, stat) => {
       if (stat && minutesAgo(20) < stat.mtime) {
         fs.readFile(f, (err, body) => {
