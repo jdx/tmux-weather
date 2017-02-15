@@ -13,6 +13,7 @@ try { fs.mkdirSync(cacheDir) } catch (err) {}
 process.on('uncaughtException', (err) => {
   let p = path.join(cacheDir, 'weather.log')
   let log = fs.createWriteStream(p)
+  log.write(new Date() + '\n')
   log.write(err.stack + '\n')
   console.log(`#[fg=red]${p.replace(os.homedir(), '~')}`)
 })
