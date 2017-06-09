@@ -40,7 +40,7 @@ let cache = (key, fn) => {
       } else {
         fn.apply(null, args.concat(function () {
           let args = Array.prototype.slice.call(arguments)
-          fs.writeFile(f, JSON.stringify(args), (err) => {
+          fs.writeFile(f, JSON.stringify(args, null, 2), (err) => {
             if (err) console.error(err)
           })
           cb.apply(null, args)
