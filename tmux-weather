@@ -35,7 +35,12 @@ let cache = (key, fn) => {
       if (stat && minutesAgo(20) < stat.mtime) {
         fs.readFile(f, (err, body) => {
           if (err) throw err
-          cb.apply(null, JSON.parse(body))
+          try {
+            cb.apply(null, JSON.parse(body))
+          } catch (err) {
+            fs.unlinkSync(f)
+            throw err
+          }
         })
       } else {
         fn.apply(null, args.concat(function () {
