@@ -16,6 +16,9 @@ process.on('uncaughtException', (err) => {
   log.write(new Date() + '\n')
   log.write(err.stack + '\n')
   console.log(`#[fg=red]${p.replace(os.homedir(), '~')}`)
+  try {
+    fs.unlinkSync(path.join(cacheDir, 'weather.json'))
+  } catch (err) { }
 })
 
 const forecastIOApiKey = require(path.join(cacheDir, 'forecastio.json')).token
