@@ -1,17 +1,9 @@
-#!/usr/bin/env node
-'use strict'
-
 const https = require('https')
 const path = require('path')
 const os = require('os')
 const fs = require('fs')
-const exec = require('child_process').exec
-const notifier
-try {
-  notifier = require('node-notifier')
-} catch (err) {
-  console.error(err)
-}
+const exec = require('execa')
+const notifier = require('node-notifier')
 
 function notify (msg) {
   if (!notifier) return
