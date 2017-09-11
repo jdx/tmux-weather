@@ -28,6 +28,7 @@
   "license": "ISC",
   "repository": "jdxcode/tmux-weather",
   "scripts": {
+    "precommit": "lint-staged",
     "prepare": "del lib && tsc"
   }
 }
