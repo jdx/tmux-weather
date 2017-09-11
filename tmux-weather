@@ -1,16 +1,39 @@
 #!/usr/bin/env node
 'use strict'
 
-let https = require('https')
-let path = require('path')
-let os = require('os')
-let fs = require('fs')
-let exec = require('child_process').exec
+const https = require('https')
+const path = require('path')
+const os = require('os')
+const fs = require('fs')
+const exec = require('child_process').exec
+const notifier
+try {
+  notifier = require('node-notifier')
+} catch (err) {
+  console.error(err)
+}
 
-let cacheDir = path.join(os.homedir(), '.cache', 'tmux-weather')
-try { fs.mkdirSync(cacheDir) } catch (err) {}
+function notify (msg) {
+  if (!notifier) return
+  notifier.notify({
+    title: 'tmux-weather',
+    message: msg
+  })
+}
+
+function submitError (err) {
+  console.error(err.stack)
+}
+
+
+let configDir = path.join(os.homedir(), '.config', 'tmux-weather')
+let cacheDir = path.join(os.homedir(), 'Library', 'Caches', 'tmux-weather')
+try { fs.mkdirSync(cacheDir) } catch (err) {
+  submitError(err)
+}
 
 process.on('uncaughtException', (err) => {
+  notify(err.stack)
   let p = path.join(cacheDir, 'weather.log')
   let log = fs.createWriteStream(p)
   log.write(new Date() + '\n')
@@ -18,10 +41,12 @@ process.on('uncaughtException', (err) => {
   console.log(`#[fg=red]${p.replace(os.homedir(), '~')}`)
   try {
     fs.unlinkSync(path.join(cacheDir, 'weather.json'))
-  } catch (err) { }
+  } catch (err) {
+    notify(err.stack)
+  }
 })
 
-const forecastIOApiKey = require(path.join(cacheDir, 'forecastio.json')).token
+const forecastIOApiKey = require(path.join(configDir, 'forecastio.json')).token
 
 let minutesAgo = (minutes) => {
   let d = new Date()
@@ -126,6 +151,7 @@ let temp = (weather) => {
 }
 
 latlon(function (latlon) {
+  notify('fetching weather data')
   getJSON(`https://api.forecast.io/forecast/${forecastIOApiKey}/${latlon.lat},${latlon.lon}`, (err, weather) => {
     if (err) throw err
     console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}`)
