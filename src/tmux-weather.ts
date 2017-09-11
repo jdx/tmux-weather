@@ -1,111 +1,93 @@
 #!/usr/bin/env node
 
-const https = require('https')
-const path = require('path')
-const os = require('os')
-const fs = require('fs')
-const exec = require('execa')
-const notifier = require('node-notifier')
+import 'core-js/library'
+import { HTTP } from 'http-call'
+import * as path from 'path'
+import * as os from 'os'
+import * as fs from 'fs-extra'
+import * as execa from 'execa'
+import * as notifier from 'node-notifier'
 
-function notify (msg) {
-  if (!notifier) return
-  notifier.notify({
-    title: 'tmux-weather',
-    message: msg
-  })
-}
+const configDir = path.join(os.homedir(), '.config', 'tmux-weather')
+const cacheDir = path.join(os.homedir(), 'Library', 'Caches', 'tmux-weather')
+const debug = require('debug')('tmux-weather')
 
-function submitError (err) {
-  console.error(err.stack)
-}
-
-
-let configDir = path.join(os.homedir(), '.config', 'tmux-weather')
-let cacheDir = path.join(os.homedir(), 'Library', 'Caches', 'tmux-weather')
-try { fs.mkdirSync(cacheDir) } catch (err) {
-  submitError(err)
-}
-
-process.on('uncaughtException', (err) => {
-  notify(err.stack)
+function logError(err: Error) {
   let p = path.join(cacheDir, 'weather.log')
   let log = fs.createWriteStream(p)
   log.write(new Date() + '\n')
   log.write(err.stack + '\n')
   console.log(`#[fg=red]${p.replace(os.homedir(), '~')}`)
   try {
-    fs.unlinkSync(path.join(cacheDir, 'weather.json'))
+    fs.removeSync(path.join(cacheDir, 'weather.json'))
   } catch (err) {
+    console.error(err)
     notify(err.stack)
   }
-})
+}
+
+function notify(msg?: string) {
+  if (!notifier || !msg) return
+  notifier.notify({
+    title: 'tmux-weather',
+    message: msg,
+  })
+}
+
+function submitError(err: Error) {
+  console.error(err.stack)
+  notify(err.stack)
+  logError(err)
+}
+
+function errorAndExit(err: Error) {
+  try {
+    submitError(err)
+  } catch (err) {
+    console.error(err.stack)
+    process.exit(1)
+  }
+}
+
+process.on('uncaughtException', errorAndExit)
+
+type LatLon = {
+  lat: number
+  lon: number
+}
+
+interface IWeatherResponse {
+  daily: {
+    summary: string
+  }
+  currently: {
+    icon: string
+    temperature: string
+  }
+}
 
 const forecastIOApiKey = require(path.join(configDir, 'forecastio.json')).token
 
-let minutesAgo = (minutes) => {
-  let d = new Date()
-  d.setMinutes(d.getMinutes() - minutes)
-  return d
-}
-
-let cache = (key, fn) => {
-  return function () {
-    let args = Array.prototype.slice.call(arguments)
-    let cb = args.pop()
+function cache<T>(key: string, fn: (...args: any[]) => Promise<T>): (...args: any[]) => Promise<any> {
+  return async (...args: any[]): Promise<any> => {
     let f = path.join(cacheDir, `${key}.json`)
-    fs.stat(f, (_, stat) => {
-      if (stat && minutesAgo(20) < stat.mtime) {
-        fs.readFile(f, (err, body) => {
-          if (err) throw err
-          try {
-            cb.apply(null, JSON.parse(body))
-          } catch (err) {
-            fs.unlinkSync(f)
-            throw err
-          }
-        })
-      } else {
-        fn.apply(null, args.concat(function () {
-          let args = Array.prototype.slice.call(arguments)
-          fs.writeFile(f, JSON.stringify(args, null, 2), (err) => {
-            if (err) console.error(err)
-          })
-          cb.apply(null, args)
-        }))
+    try {
+      let fi = await fs.stat(f)
+      if (fi && minutesAgo(20) < fi.mtime) {
+        return await fs.readJSON(f)
       }
-    })
+    } catch (err) {
+      debug(err)
+      submitError(err)
+      await fs.remove(f)
+    }
+    let body = await fn(...args)
+    await fs.writeJSON(f, body)
+    return body
   }
 }
 
-let latlon = (cb) => {
-  exec('whereami', (error, stdout, stderr) => {
-    if (error) throw new Error(`whereami: ${stdout}${stderr}`)
-    let lines = stdout.split('\n')
-    let lat = lines.find((l) => l.startsWith('Latitude:')).split(': ')[1]
-    let lon = lines.find((l) => l.startsWith('Longitude:')).split(': ')[1]
-    cb({lat, lon})
-  })
-}
-
-latlon = cache('latlon', latlon)
-
-let getJSON = (url, cb) => {
-  https.get(url, (res) => {
-    let body = ''
-    res.setEncoding('utf-8')
-    res
-      .on('error', cb)
-      .on('data', (data) => { body += data })
-      .on('end', () => {
-        if (res.statusCode !== 200) cb(new Error(body))
-        else cb(null, JSON.parse(body))
-      })
-  })
-}
-
-getJSON = cache('weather', getJSON)
-
-let getIcon = (weather) => {
+function getIcon(weather: IWeatherResponse['currently']) {
   switch (weather.icon) {
     case 'clear-day':
       // TODO: add sunrise/sunset 🌇 🌅
@@ -131,8 +113,8 @@ let getIcon = (weather) => {
   }
 }
 
-let temp = (weather) => {
-  let temp = weather.temperature
+function temp(weather: IWeatherResponse['currently']) {
+  let temp = parseInt(weather.temperature)
   let color
   if (temp < 40) color = 27
   else if (temp < 50) color = 39
@@ -141,13 +123,38 @@ let temp = (weather) => {
   else if (temp < 80) color = 208
   else if (temp < 90) color = 202
   else color = 196
-  return `#[fg=colour${color}]${parseInt(temp)}`
+  return `#[fg=colour${color}]${temp}`
 }
 
-latlon(function (latlon) {
-  notify('fetching weather data')
-  getJSON(`https://api.forecast.io/forecast/${forecastIOApiKey}/${latlon.lat},${latlon.lon}`, (err, weather) => {
-    if (err) throw err
-    console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}`)
-  })
+function minutesAgo(minutes: number) {
+  let d = new Date()
+  d.setMinutes(d.getMinutes() - minutes)
+  return d
+}
+
+const getLatLon = cache('latlon', async () => {
+  debug('fetching lat/lon...')
+  const { stdout } = await execa('whereami')
+  let lines = stdout.split('\n')
+  let lat = (lines.find(l => l.startsWith('Latitude:')) as string).split(': ')[1]
+  let lon = (lines.find(l => l.startsWith('Longitude:')) as string).split(': ')[1]
+  return { lat, lon }
 })
+
+const getWeather = cache('weather', async ({ lat, lon }: { lat: number; lon: number }) => {
+  notify('fetching weather data')
+  debug('fetching weather...')
+  const { body } = await HTTP.get(`https://api.forecast.io/forecast/${forecastIOApiKey}/${lat},${lon}`)
+  return body as IWeatherResponse
+})
+
+async function run() {
+  await fs.mkdirp(cacheDir)
+
+  const { lat, lon } = await getLatLon()
+  debug('lat %o, lon: %o', lat, lon)
+  const weather = await getWeather({ lat, lon })
+  debug('got weather: %s', weather.daily.summary)
+  console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}`)
+}
+run().catch(errorAndExit)
