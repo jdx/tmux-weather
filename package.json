@@ -23,7 +23,8 @@
     "typescript": "^2.5.2"
   },
   "files": [
-    "bin"
+    "bin",
+    "lib"
   ],
   "license": "ISC",
   "repository": "jdxcode/tmux-weather",
