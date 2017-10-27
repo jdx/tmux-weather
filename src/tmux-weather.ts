@@ -142,7 +142,7 @@ const getLatLon = cache('latlon', async () => {
 })
 
 const getWeather = cache('weather', async ({ lat, lon }: { lat: number; lon: number }) => {
-  notify('fetching weather data')
+  // notify('fetching weather data')
   debug('fetching weather...')
   const { body } = await HTTP.get(`https://api.forecast.io/forecast/${forecastIOApiKey}/${lat},${lon}`)
   return body as IWeatherResponse
