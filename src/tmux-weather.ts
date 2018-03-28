@@ -82,7 +82,7 @@ function cache<T>(key: string, fn: (...args: any[]) => Promise<T>): (...args: an
       await fs.remove(f)
     }
     let body = await fn(...args)
-    await fs.writeJSON(f, body)
+    await fs.outputJSON(f, body)
     return body
   }
 }
