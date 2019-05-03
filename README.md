@@ -7,6 +7,12 @@ Show weather in tmux status line. No powerline needed.
 
 Installation
 ============
+Install [latlon](https://github.com/jdxcode/latlon).
+
+```
+$ brew install jdxcode/brew/latlon
+```
+
 Copy `tmux-weather` into PATH.
 
 ```

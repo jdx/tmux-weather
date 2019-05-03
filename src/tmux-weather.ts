@@ -52,8 +52,8 @@ function errorAndExit(err: Error) {
 process.on('uncaughtException', errorAndExit)
 
 type LatLon = {
-  lat: number
-  lon: number
+  latitude: number
+  longitude: number
 }
 
 interface IWeatherResponse {
@@ -132,19 +132,16 @@ function minutesAgo(minutes: number) {
   return d
 }
 
-const getLatLon = cache('latlon', async () => {
+const getLatLon = cache('latlon', async (): Promise<LatLon> => {
   debug('fetching lat/lon...')
-  const { stdout } = await execa('whereami')
-  let lines = stdout.split('\n')
-  let lat = (lines.find(l => l.startsWith('Latitude:')) as string).split(': ')[1]
-  let lon = (lines.find(l => l.startsWith('Longitude:')) as string).split(': ')[1]
-  return { lat, lon }
+  const { stdout } = await execa('latlon')
+  return JSON.parse(stdout)
 })
 
-const getWeather = cache('weather', async ({ lat, lon }: { lat: number; lon: number }) => {
+const getWeather = cache('weather', async ({ latitude, longitude }: LatLon) => {
   // notify('fetching weather data')
   debug('fetching weather...')
-  const { body } = await HTTP.get(`https://api.forecast.io/forecast/${forecastIOApiKey}/${lat},${lon}`)
+  const { body } = await HTTP.get(`https://api.forecast.io/forecast/${forecastIOApiKey}/${latitude},${longitude}`)
   return body as IWeatherResponse
 })
 
