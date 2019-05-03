@@ -68,7 +68,7 @@ interface IWeatherResponse {
 
 const forecastIOApiKey = require(path.join(configDir, 'forecastio.json')).token
 
-function cache<T>(key: string, fn: (...args: any[]) => Promise<T>): (...args: any[]) => Promise<any> {
+function cache<T>(key: string, fn: (...args: any[]) => Promise<T>): (...args: any[]) => Promise<T> {
   return async (...args: any[]): Promise<any> => {
     let f = path.join(cacheDir, `${key}.json`)
     try {
@@ -148,9 +148,9 @@ const getWeather = cache('weather', async ({ latitude, longitude }: LatLon) => {
 async function run() {
   await fs.mkdirp(cacheDir)
 
-  const { lat, lon } = await getLatLon()
-  debug('lat %o, lon: %o', lat, lon)
-  const weather = await getWeather({ lat, lon })
+  const { latitude, longitude } = await getLatLon()
+  debug('lat %o, lon: %o', latitude, longitude)
+  const weather = await getWeather({ latitude, longitude })
   debug('got weather: %s', weather.daily.summary)
   console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}`)
 }
