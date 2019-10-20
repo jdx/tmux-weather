@@ -9,8 +9,11 @@ import * as execa from 'execa'
 import * as notifier from 'node-notifier'
 
 const configDir = path.join(os.homedir(), '.config', 'tmux-weather')
-const cacheDir = path.join(os.homedir(), 'Library', 'Caches', 'tmux-weather')
+const cacheDir = path.join(os.homedir(), process.platform === 'darwin' ? 'Library/Caches' : '.cache', 'tmux-weather')
 const debug = require('debug')('tmux-weather')
+
+fs.mkdirpSync(cacheDir)
+fs.mkdirpSync(configDir)
 
 function logError(err: Error) {
   let p = path.join(cacheDir, 'weather.log')
@@ -132,11 +135,14 @@ function minutesAgo(minutes: number) {
   return d
 }
 
-const getLatLon = cache('latlon', async (): Promise<LatLon> => {
-  debug('fetching lat/lon...')
-  const { stdout } = await execa('latlon')
-  return JSON.parse(stdout)
-})
+const getLatLon = cache(
+  'latlon',
+  async (): Promise<LatLon> => {
+    debug('fetching lat/lon...')
+    const { stdout } = await execa('latlon')
+    return JSON.parse(stdout)
+  },
+)
 
 const getWeather = cache('weather', async ({ latitude, longitude }: LatLon) => {
   // notify('fetching weather data')
