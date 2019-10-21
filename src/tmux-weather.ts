@@ -71,7 +71,11 @@ interface IWeatherResponse {
 
 const forecastIOApiKey = require(path.join(configDir, 'forecastio.json')).token
 
-function cache<T>(key: string, fn: (...args: any[]) => Promise<T>): (...args: any[]) => Promise<T> {
+function cache<T>(
+  key: string,
+  fn: (...args: any[]) => Promise<T>,
+  useCacheOnFail = false,
+): (...args: any[]) => Promise<T> {
   return async (...args: any[]): Promise<any> => {
     let f = path.join(cacheDir, `${key}.json`)
     try {
@@ -84,9 +88,14 @@ function cache<T>(key: string, fn: (...args: any[]) => Promise<T>): (...args: an
       submitError(err)
       await fs.remove(f)
     }
-    let body = await fn(...args)
-    await fs.outputJSON(f, body)
-    return body
+    try {
+      let body = await fn(...args)
+      await fs.outputJSON(f, body)
+      return body
+    } catch (err) {
+      if (!useCacheOnFail) throw err
+      return fs.readJSON(f)
+    }
   }
 }
 
@@ -142,6 +151,7 @@ const getLatLon = cache(
     const { stdout } = await execa('latlon')
     return JSON.parse(stdout)
   },
+  true,
 )
 
 const getWeather = cache('weather', async ({ latitude, longitude }: LatLon) => {
