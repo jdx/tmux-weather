@@ -108,7 +108,7 @@ function getIcon(weather: IWeatherResponse['currently']) {
       return '🌙'
     case 'sleet':
     case 'rain':
-      return '☔'
+      return '🌧️ '
     case 'snow':
       return '❄️'
     case 'wind':
@@ -168,6 +168,6 @@ async function run() {
   debug('lat %o, lon: %o', latitude, longitude)
   const weather = await getWeather({ latitude, longitude })
   debug('got weather: %s', weather.daily.summary)
-  console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}`)
+  console.log(`${getIcon(weather.currently)} ${temp(weather.currently)}°`)
 }
 run().catch(errorAndExit)
